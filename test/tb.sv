@@ -6,11 +6,12 @@ module tb;
 
   task automatic test(string pattern, string text, bit expected);
     bit ok;
-    ok = match(pattern, text);
+    int s, e;
+    ok = match(pattern, text, s, e);
 
-    $display("%s: exp=%0d act=%0d pattern=%s text=%s",
+    $display("%s: exp=%0d act=%0d pattern=%s text=%s (%0d, %0d)",
       (ok == expected) ? "OK" : "NG ***",
-      expected, ok, pattern, text
+      expected, ok, pattern, text, s, e
     );
   endtask
 
@@ -20,6 +21,7 @@ module tb;
     test("abc", "abc", 1);
     test("abc", "ab",  0);
     test("abc", "xabc", 1);
+    test("abc", "abcxabc", 1);
 
     // |
     test("a|b", "a", 1);
