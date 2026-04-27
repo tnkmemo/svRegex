@@ -96,18 +96,19 @@ git clone https://github.com/tnkmemo/svRegex.git
 module tb;
   import svRegex_pkg::*;
 
+  int s, e;
   string pattern = "a+?";
   string text    = "aaaa";
 
-  bit ok = match(pattern, text);  // substring match → OK
+  bit ok = match(pattern, text, s, e);  // substring match → OK
 
-  initial $display("match = %0d", ok);
+  initial $display("match = %0d (%0d, %0d)", ok, s, e);
 endmodule
 ```
 
 # Reference
 
-## `function bit match(string pattern, string text);`
+## `function bit match(string pattern, string text, output int s, output int e);`
 
 Applies the regular expression `pattern` to the input string `text`.  
 Returns `1` if **substring matching** succeeds, otherwise returns `0`.
@@ -117,6 +118,8 @@ Returns `1` if **substring matching** succeeds, otherwise returns `0`.
 |------|------|-------------|
 | `pattern` | `string` | Regular expression pattern (SystemVerilog string) |
 | `text` | `string` | Input text to be matched |
+| `s` | `output int` | Start position |
+| `e` | `output int` | End position |
 
 ---
 
