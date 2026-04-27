@@ -42,7 +42,6 @@ class NfaRunner;
     end
   endfunction
 
-
   // ------------------------------------------------------------
   // Anchor
   // ------------------------------------------------------------
@@ -81,12 +80,10 @@ class NfaRunner;
       epsilon_closure(nfa, next, cur_closure);
   endfunction
 
-
   // ------------------------------------------------------------
-  // Execute NFA
+  // Execute NFA from pos
   // ------------------------------------------------------------
-  function bit run(NFA nfa, string idata);
-    int pos;
+  function int run_from_pos(NFA nfa, string idata, int pos);
     int cur_set[$];
     int cur_closure[$];
     int next_set[$];
@@ -95,85 +92,105 @@ class NfaRunner;
     byte ch;
     transition_t tr;
 
-    // Partial match
-    for (pos = 0; pos <= idata.len(); pos++) begin
+    // epsilon-closure
+    cur_set = {};
+    cur_set.push_back(nfa.start_state);
+    epsilon_closure(nfa, cur_set, cur_closure);
 
-      // Initial epsilon-closure
-      cur_set = {};
-      cur_set.push_back(nfa.start_state);
-      epsilon_closure(nfa, cur_set, cur_closure);
+    // anchor before reading
+    anchor_step(nfa, cur_closure, pos, pos, idata);
 
-      // process anchor before reading literal
-      anchor_step(nfa, cur_closure, pos, pos, idata);
-
-      for (i = pos; i < idata.len(); i++) begin
-        ch = idata[i];
-        next_set = {};
-
-        foreach (cur_closure[j]) begin
-          s = cur_closure[j];
-          foreach (nfa.states[s].transitions[t]) begin
-            tr = nfa.states[s].transitions[t];
-
-            // epsilon
-            if (tr.ch == -1) begin
-            end
-
-            // Dot (.)
-            else if (tr.ch == -2) begin
-              next_set.push_back(tr.to);
-            end
-
-            // StartAnchor (^)
-            else if (tr.ch == -3) begin
-            end
-
-            // EndAnchor ($)
-            else if (tr.ch == -4) begin
-              if (i == idata.len())
-                next_set.push_back(tr.to);
-            end
-
-            // Char class ([...])
-            else if (tr.ch <= -5) begin
-              int class_id = -(tr.ch + 5);
-              CharClassNode cc = nfa.char_classes[class_id];
-
-              bit match = 0;
-              int k;
-              foreach (cc.chars[k]) begin
-                if (cc.chars[k] == ch) begin
-                  match = 1;
-                  break;
-                end
-              end
-              if (cc.inverted) match = !match;
-
-              if (match) next_set.push_back(tr.to);
-            end
-
-            // Literal
-            else if (tr.ch == ch) begin
-              next_set.push_back(tr.to);
-            end
-          end
-        end
-
-        if (next_set.size() == 0) break;
-
-        epsilon_closure(nfa, next_set, cur_closure);
-
-        // Process anchor
-        ip = i + 1;
-        anchor_step(nfa, cur_closure, pos, ip, idata);
-      end
+    for (i = pos; i < idata.len(); i++) begin
+      ch = idata[i];
+      next_set = {};
 
       foreach (cur_closure[j]) begin
-        if (nfa.states[cur_closure[j]].is_accept)
-          return 1;
+        s = cur_closure[j];
+        foreach (nfa.states[s].transitions[t]) begin
+          tr = nfa.states[s].transitions[t];
+
+          // epsilon
+          if (tr.ch == -1) begin end
+
+          // Dot
+          else if (tr.ch == -2) begin
+            next_set.push_back(tr.to);
+          end
+
+          // StartAnchor
+          else if (tr.ch == -3) begin end
+
+          // EndAnchor
+          else if (tr.ch == -4) begin
+            if (i == idata.len())
+              next_set.push_back(tr.to);
+          end
+
+          // Char class
+          else if (tr.ch <= -5) begin
+            int class_id = -(tr.ch + 5);
+            CharClassNode cc = nfa.char_classes[class_id];
+
+            bit match = 0;
+            int k;
+            foreach (cc.chars[k]) begin
+              if (cc.chars[k] == ch) begin
+                match = 1;
+                break;
+              end
+            end
+            if (cc.inverted) match = !match;
+
+            if (match) next_set.push_back(tr.to);
+          end
+
+          // Literal
+          else if (tr.ch == ch) begin
+            next_set.push_back(tr.to);
+          end
+        end
+      end
+
+      if (next_set.size() == 0) break;
+
+      epsilon_closure(nfa, next_set, cur_closure);
+
+      // anchor
+      ip = i + 1;
+      anchor_step(nfa, cur_closure, pos, ip, idata);
+    end
+
+    // accept check
+    foreach (cur_closure[j]) begin
+      if (nfa.states[cur_closure[j]].is_accept)
+        return i;
+    end
+
+    return -1;
+  endfunction
+
+  // ------------------------------------------------------------
+  // Execute NFA
+  // ------------------------------------------------------------
+  function bit run (
+    NFA nfa,
+    string idata,
+    output int start_pos,
+    output int end_pos
+  );
+    int e;
+
+    for (int pos = 0; pos <= idata.len(); pos++) begin
+      e = run_from_pos(nfa, idata, pos);
+      if (e >= 0) begin
+        start_pos = pos;
+        end_pos   = e;
+        return 1;
       end
     end
 
+    start_pos = -1;
+    end_pos   = -1;
     return 0;
   endfunction
 

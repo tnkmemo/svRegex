@@ -27,7 +27,7 @@ package svRegex_pkg;
   `include "nfa/nfa_builder.svh"
   `include "nfa/nfa_runner.svh"
 
-  function automatic bit match(string pattern, string text);
+  function automatic bit match(string pattern, string text, output int s, output int e);
     Parser     p;
     RegexNode  root;
     NfaBuilder builder;
@@ -45,7 +45,7 @@ package svRegex_pkg;
 
     // Execute
     runner = new();
-    match  = runner.run(nfa, text);
+    match  = runner.run(nfa, text, s, e);
   endfunction
 
 endpackage
