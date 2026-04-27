@@ -21,6 +21,7 @@ module tb;
     test("abc", "abc", 1);
     test("abc", "ab",  0);
     test("abc", "xabc", 1);
+    test("abc", "abcxabc", 1);
 
     // |
     test("a|b", "a", 1);
